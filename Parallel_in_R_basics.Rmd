@@ -41,9 +41,9 @@ output:
 
 **Interpretation**
 
-The Map calculates the basic core statistic.
-
-The Reduce aggregates the statistic into what we want.
+* Map: calculate the basic core statistic.
+* Reorder stuff so reduce can find it
+* Reduce: aggregate the statistic from Map into what we want.
 
 ## MapReduce - Schematic {.flexbox .vcenter}
 
@@ -63,7 +63,119 @@ lapply(1:3, function(x) c(x, x^2, x^3))
 
 ## Package: `parallel`
 
+<div class="columns-2">
+```{r}
+library(parallel)
+no_cores <- detectCores()
+base <- 2
+
+# Initiate cluster
+cl<-makeCluster(no_cores)
+clusterExport(cl, "base")
+
+# Run
+parLapply(cl, 
+          2:4, 
+          function(exponent) 
+            base^exponent)
+
+# Finish
+stopCluster(cl)
+```
+</div>
+
+
+## Package: `parallel` with parSapply
+
+```{r Initiate_pr_cluster, echo=FALSE}
+no_cores <- detectCores()
+base <- 2
+cl<-makeCluster(no_cores)
+clusterExport(cl, "base")
+```
+
+```{r}
+# Simple output
+parSapply(cl, 2:4, 
+          function(exponent) 
+            base^exponent)
+
+# Matrix output with names
+parSapply(cl, as.character(2:4), 
+          function(exponent){
+            x <- as.numeric(exponent)
+            c(base = base^x, self = x^x)
+          })
+```
+
+```{r, echo=FALSE}
+stopCluster(cl)
+```
+
 ## Package: `foreach`
+
+<div class="columns-2">
+```{r, message=FALSE, error=TRUE}
+library(foreach)
+library(doParallel)
+
+cl<-makeCluster(no_cores)
+
+# Do the foreach
+registerDoParallel(cl)
+foreach(exponent = 2:4, 
+        .combine = c)  %dopar%  
+  base^exponent
+
+# Pass two variables
+foreach(exponent = 2:4,
+        base = 2:4, 
+        .combine = c) %dopar% 
+  base^exponent
+
+stopCluster(cl)
+```
+</div>
+
+## Package: `foreach` variable scope
+
+```{r Initiate_cluster, echo=FALSE}
+cl<-makeCluster(no_cores)
+registerDoParallel(cl)
+```
+
+```{r, error=TRUE}
+test <- function(export = NULL){
+  foreach(exponent = 2:4, 
+          .export = export,
+          .combine = c)  %dopar%  
+    base^exponent 
+}
+test()
+
+# We need to export "base"-variable to avoid error
+test("base")
+```
+
+## Package: `foreach` creating a lapply result
+
+```{r}
+# Unexpected list?
+foreach(exponent = 2:4, 
+        base = 2:4,
+        .combine = list) %dopar% 
+  base^exponent
+```
+
+## Package: `foreach` creating a lapply result cont.
+
+```{r}
+foreach(exponent = 2:4, 
+        base = 2:4,
+        .combine = list,
+        .multicombine = TRUE) %dopar% 
+  base^exponent
+```
 
 ## Fork or sock?
 
@@ -79,12 +191,67 @@ PSOCK: Parallel Socket Cluster<br />
 System: Windows<br />
 Environment: Empty
 
+## Fork or sock? cont. 
+
+**From Ubuntu 14:10**
+
+```
+cl<-makeCluster(no_cores)
+clusterExport(cl, "a")
+clusterEvalQ(cl, library(pryr))
+
+parSapply(cl, X = 1:10, function(x) {address(a)}) == address(a)
+# [1] FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE
+stopCluster(cl)
+```
+
+## Fork or sock? cont. 
+
+**From Ubuntu 14:10**
+
+```
+cl<-makePSOCKcluster(no_cores)
+clusterEvalQ(cl, library(pryr))
+clusterExport(cl, "a")
+
+parSapply(cl, X = 1:10, function(x) address(a)) == address(a)
+# [1] FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE
+stopCluster(cl)
+
+cl<-makeForkCluster(no_cores)
+parSapply(cl, X = 1:10, function(x) address(a)) == address(a)
+# [1] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+stopCluster(cl)
+```
+
+## Fork or sock? cont. 
+
+**From Ubuntu 14:10**
+
+No memory corruption even with shared
+
+```
+b <- 0
+cl<-makeForkcluster(2)
+clusterExport(cl, "b")
+
+parSapply(cl, X = 1:10, function(x) {b <- b + 1; b})
+# [1] 1 1 1 1 1 1 1 1 1 1
+parSapply(cl, X = 1:10, function(x) {b <<- b + 1; b})
+# [1] 1 2 3 4 5 1 2 3 4 5
+b
+# [1] 0
+```
+
 # Trouble shooting
 
 ## Debugging
 
-Options:
-* Setting makeCluster(..., outfile = "par_out.txt")
+**Tips**
+
+* Avoid `stop()`
+* Setting `makeCluster(..., outfile = "par_out.txt")`
+* Each element has a unique error file
 
 ## Caching
 
@@ -92,9 +259,56 @@ Options:
 
 1. Do a digest of settings + function
 2. Check if file.exists()
-3. Check if digests match
+3. Load if exists otherwise run funciton on data and save into file
 
-* R.cache
+or use `R.cache`-package
+
+## Caching with digest
+
+```{r, echo=FALSE, results='hide'}
+file.remove(list.files(pattern = "Cache.+\\.Rdata"))
+```
+
+<div class="columns-2">
+```{r}
+cacheParallel <- function(){
+  vars <- 1:2
+  tmp <- clusterEvalQ(cl, 
+                      library(digest))
+  
+  parSapply(cl, vars, function(var){
+    fn <- function(a) a^2
+    dg <- digest(list(fn, var))
+    cache_fn <- 
+      sprintf("Cache_%s.Rdata", 
+              dg)
+    if (file.exists(cache_fn)){
+      load(cache_fn)
+    }else{
+      var <- fn(var); 
+      Sys.sleep(5)
+      save(var, file = cache_fn)
+    }
+    return(var)
+  })
+}
+```
+</div>
+
+## Caching with digest cont.
+
+<div class="columns-2">
+```{r}
+system.time(out <- cacheParallel())
+out
+system.time(out <- cacheParallel())
+out
+```
+</div>
+
+```{r, echo=FALSE, results='hide'}
+file.remove(list.files(pattern = "Cache.+\\.Rdata"))
+```
 
 ## Load balancing - workload
 
@@ -116,3 +330,7 @@ function (cl = NULL, X, fun, ...)
 * force return memory through **gc()**
 * try to do high-memory load parallel with low memory
 * skip parallel if limit reached
+
+```{r Stop_cluster, echo=FALSE}
+stopCluster(cl)
+```

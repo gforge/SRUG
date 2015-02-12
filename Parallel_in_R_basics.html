@@ -125,9 +125,9 @@
 <ol>
 <li>MapReduce</li>
 <li>Thinking lapply</li>
-<li>Threading</li>
 <li>Package: <code>parallel</code></li>
 <li>Package: <code>foreach</code></li>
+<li>Fork or sock?</li>
 </ol>
 
 <p><strong>Trouble shooting</strong></p>
@@ -150,9 +150,11 @@
 
 <p><strong>Interpretation</strong></p>
 
-<p>The Map calculates the basic core statistic.</p>
-
-<p>The Reduce aggregates the statistic into what we want.</p>
+<ul>
+<li>Map: calculate the basic core statistic.</li>
+<li>Reorder stuff so reduce can find it</li>
+<li>Reduce: aggregate the statistic from Map into what we want.</li>
+</ul>
 
 </article></slide><slide class=''><hgroup><h2>MapReduce - Schematic</h2></hgroup><article  id="mapreduce---schematic" class="flexbox vcenter">
 
@@ -179,25 +181,201 @@
 ## [[3]]
 ## [1]  3  9 27</pre>
 
-</article></slide><slide class=''><hgroup><h2>Fork or PSOCK?</h2></hgroup><article  id="fork-or-psock">
+</article></slide><slide class=''><hgroup><h2>Package: <code>parallel</code></h2></hgroup><article  id="package-parallel">
+
+<div class="columns-2">
+<pre class = 'prettyprint lang-r'>library(parallel)
+no_cores &lt;- detectCores()
+base &lt;- 2
+
+# Initiate cluster
+cl&lt;-makeCluster(no_cores)
+clusterExport(cl, &quot;base&quot;)
+
+# Run
+parLapply(cl, 
+          2:4, 
+          function(exponent) 
+            base^exponent)</pre>
+
+<pre >## [[1]]
+## [1] 4
+## 
+## [[2]]
+## [1] 8
+## 
+## [[3]]
+## [1] 16</pre>
+
+<pre class = 'prettyprint lang-r'># Finish
+stopCluster(cl)</pre></div>
+
+</article></slide><slide class=''><hgroup><h2>Package: <code>parallel</code> with parSapply</h2></hgroup><article  id="package-parallel-with-parsapply">
+
+<pre class = 'prettyprint lang-r'># Simple output
+parSapply(cl, 2:4, 
+          function(exponent) 
+            base^exponent)</pre>
+
+<pre >## [1]  4  8 16</pre>
+
+<pre class = 'prettyprint lang-r'># Matrix output with names
+parSapply(cl, as.character(2:4), 
+          function(exponent){
+            x &lt;- as.numeric(exponent)
+            c(base = base^x, self = x^x)
+          })</pre>
+
+<pre >##      2  3   4
+## base 4  8  16
+## self 4 27 256</pre>
+
+</article></slide><slide class=''><hgroup><h2>Package: <code>foreach</code></h2></hgroup><article  id="package-foreach">
+
+<div class="columns-2">
+<pre class = 'prettyprint lang-r'>library(foreach)
+library(doParallel)
+
+cl&lt;-makeCluster(no_cores)
+
+# Do the foreach
+registerDoParallel(cl)
+foreach(exponent = 2:4, 
+        .combine = c)  %dopar%  
+  base^exponent</pre>
+
+<pre >## [1]  4  8 16</pre>
+
+<pre class = 'prettyprint lang-r'># Pass two variables
+foreach(exponent = 2:4,
+        base = 2:4, 
+        .combine = c) %dopar% 
+  base^exponent</pre>
+
+<pre >## [1]   4  27 256</pre>
+
+<pre class = 'prettyprint lang-r'>stopCluster(cl)</pre></div>
+
+</article></slide><slide class=''><hgroup><h2>Package: <code>foreach</code> variable scope</h2></hgroup><article  id="package-foreach-variable-scope">
+
+<pre class = 'prettyprint lang-r'>test &lt;- function(export = NULL){
+  foreach(exponent = 2:4, 
+          .export = export,
+          .combine = c)  %dopar%  
+    base^exponent 
+}
+test()</pre>
+
+<pre >## Error in base^exponent: task 1 failed - &quot;object &#39;base&#39; not found&quot;</pre>
+
+<pre class = 'prettyprint lang-r'># We need to export &quot;base&quot;-variable to avoid error
+test(&quot;base&quot;)</pre>
+
+<pre >## [1]  4  8 16</pre>
+
+</article></slide><slide class=''><hgroup><h2>Package: <code>foreach</code> creating a lapply result</h2></hgroup><article  id="package-foreach-creating-a-lapply-result">
+
+<pre class = 'prettyprint lang-r'># Unexpected list?
+foreach(exponent = 2:4, 
+        base = 2:4,
+        .combine = list) %dopar% 
+  base^exponent</pre>
+
+<pre >## [[1]]
+## [[1]][[1]]
+## [1] 4
+## 
+## [[1]][[2]]
+## [1] 27
+## 
+## 
+## [[2]]
+## [1] 256</pre>
+
+</article></slide><slide class=''><hgroup><h2>Package: <code>foreach</code> creating a lapply result cont.</h2></hgroup><article  id="package-foreach-creating-a-lapply-result-cont.">
+
+<pre class = 'prettyprint lang-r'>foreach(exponent = 2:4, 
+        base = 2:4,
+        .combine = list,
+        .multicombine = TRUE) %dopar% 
+  base^exponent</pre>
+
+<pre >## [[1]]
+## [1] 4
+## 
+## [[2]]
+## [1] 27
+## 
+## [[3]]
+## [1] 256</pre>
+
+</article></slide><slide class=''><hgroup><h2>Fork or sock?</h2></hgroup><article  id="fork-or-sock">
 
 <p><strong>Fork</strong></p>
 
-<p>Fork: &quot;to divide in branches, go separate ways&quot;<br /> System: Unix/Mac<br /> Copy: Everything</p>
+<p>Fork: &quot;to divide in branches, go separate ways&quot;<br /> System: Unix/Mac<br /> Environment: Link all</p>
 
 <p><strong>PSOCK</strong></p>
 
-<p>PSOCK: Parallel Socket Cluster<br /> System: Windows<br /> Copy: none</p>
+<p>PSOCK: Parallel Socket Cluster<br /> System: Windows<br /> Environment: Empty</p>
 
-</article></slide><slide class=''><hgroup><h2>Package: <code>parallel</code></h2></hgroup><article  id="package-parallel">
+</article></slide><slide class=''><hgroup><h2>Fork or sock? cont.</h2></hgroup><article  id="fork-or-sock-cont.">
 
-</article></slide><slide class=''><hgroup><h2>Package: <code>foreach</code></h2></hgroup><article  id="package-foreach">
+<p><strong>From Ubuntu 14:10</strong></p>
+
+<pre >cl&lt;-makeCluster(no_cores)
+clusterExport(cl, &quot;a&quot;)
+clusterEvalQ(cl, library(pryr))
+
+parSapply(cl, X = 1:10, function(x) {address(a)}) == address(a)
+# [1] FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE
+stopCluster(cl)</pre>
+
+</article></slide><slide class=''><hgroup><h2>Fork or sock? cont.</h2></hgroup><article  id="fork-or-sock-cont.-1">
+
+<p><strong>From Ubuntu 14:10</strong></p>
+
+<pre >cl&lt;-makePSOCKcluster(no_cores)
+clusterEvalQ(cl, library(pryr))
+clusterExport(cl, &quot;a&quot;)
+
+parSapply(cl, X = 1:10, function(x) address(a)) == address(a)
+# [1] FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE
+stopCluster(cl)
+
+cl&lt;-makeForkCluster(no_cores)
+parSapply(cl, X = 1:10, function(x) address(a)) == address(a)
+# [1] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+stopCluster(cl)</pre>
+
+</article></slide><slide class=''><hgroup><h2>Fork or sock? cont.</h2></hgroup><article  id="fork-or-sock-cont.-2">
+
+<p><strong>From Ubuntu 14:10</strong></p>
+
+<p>No memory corruption even with shared</p>
+
+<pre >b &lt;- 0
+cl&lt;-makeForkcluster(2)
+clusterExport(cl, &quot;b&quot;)
+
+parSapply(cl, X = 1:10, function(x) {b &lt;- b + 1; b})
+# [1] 1 1 1 1 1 1 1 1 1 1
+parSapply(cl, X = 1:10, function(x) {b &lt;&lt;- b + 1; b})
+# [1] 1 2 3 4 5 1 2 3 4 5
+b
+# [1] 0</pre>
 
 </article></slide><slide class='segue dark nobackground'><hgroup class = 'auto-fadein'><h2>Trouble shooting</h2></hgroup><article  id="trouble-shooting">
 
 </article></slide><slide class=''><hgroup><h2>Debugging</h2></hgroup><article  id="debugging">
 
-<p>Options: * Setting makeCluster(&#8230;, outfile = &quot;par_out.txt&quot;)</p>
+<p><strong>Tips</strong></p>
+
+<ul>
+<li>Avoid <code>stop()</code></li>
+<li>Setting <code>makeCluster(..., outfile = &quot;par_out.txt&quot;)</code></li>
+<li>Each element has a unique error file</li>
+</ul>
 
 </article></slide><slide class=''><hgroup><h2>Caching</h2></hgroup><article  id="caching">
 
@@ -206,12 +384,56 @@
 <ol>
 <li>Do a digest of settings + function</li>
 <li>Check if file.exists()</li>
-<li>Check if digests match</li>
+<li>Load if exists otherwise run funciton on data and save into file</li>
 </ol>
 
-<ul>
-<li>R.cache</li>
-</ul>
+<p>or use <code>R.cache</code>-package</p>
+
+</article></slide><slide class=''><hgroup><h2>Caching with digest</h2></hgroup><article  id="caching-with-digest">
+
+<div class="columns-2">
+<pre class = 'prettyprint lang-r'>cacheParallel &lt;- function(){
+  vars &lt;- 1:2
+  tmp &lt;- clusterEvalQ(cl, 
+                      library(digest))
+  
+  parSapply(cl, vars, function(var){
+    fn &lt;- function(a) a^2
+    dg &lt;- digest(list(fn, var))
+    cache_fn &lt;- 
+      sprintf(&quot;Cache_%s.Rdata&quot;, 
+              dg)
+    if (file.exists(cache_fn)){
+      load(cache_fn)
+    }else{
+      var &lt;- fn(var); 
+      Sys.sleep(5)
+      save(var, file = cache_fn)
+    }
+    return(var)
+  })
+}</pre></div>
+
+</article></slide><slide class=''><hgroup><h2>Caching with digest cont.</h2></hgroup><article  id="caching-with-digest-cont.">
+
+<div class="columns-2">
+<pre class = 'prettyprint lang-r'>system.time(out &lt;- cacheParallel())</pre>
+
+<pre >##    user  system elapsed 
+##    0.00    0.00    5.11</pre>
+
+<pre class = 'prettyprint lang-r'>out</pre>
+
+<pre >## [1] 1 4</pre>
+
+<pre class = 'prettyprint lang-r'>system.time(out &lt;- cacheParallel())</pre>
+
+<pre >##    user  system elapsed 
+##       0       0       0</pre>
+
+<pre class = 'prettyprint lang-r'>out</pre>
+
+<pre >## [1] 1 4</pre></div>
 
 </article></slide><slide class=''><hgroup><h2>Load balancing - workload</h2></hgroup><article  id="load-balancing---workload">
 
