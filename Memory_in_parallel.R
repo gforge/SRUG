@@ -66,3 +66,49 @@ do.call(rbind, out)
 # 4 0x5ebe448 3   0x5d12c28
 address(b)
 # [1] "0x5ebe448"
+
+###################
+# Memory overload #
+###################
+rm(list=ls())
+gc()
+library(pryr)
+library(magrittr)
+a <- matrix(1, ncol=10^4*2, nrow=10^4)
+object_size(a)
+
+system.time(mean(a))
+system.time(mean(a + 1))
+
+system.time(sapply(1:8, function(x) mean(a + 1)))
+
+library(parallel)
+cl <- makeCluster(4, type = "PSOCK")
+system.time(clusterExport(cl, "a"))
+system.time(parSapply(cl, 1:8, function(x) mean(a + 1)))
+stopCluster(cl)
+
+gc()
+cl <- makeCluster(4, type = "FORK")
+system.time(parSapply(cl, 1:8, function(x) mean(a + 1)))
+stopCluster(cl)
+
+# Now crash the memory...
+cl <- makeCluster(8, type = "PSOCK")
+system.time(clusterExport(cl, "a"))
+system.time(parSapply(cl, 1:8, function(x) mean(a + 1)))
+stopCluster(cl); gc();
+
+cl <- makeCluster(8, type = "FORK")
+system.time(parSapply(cl, 1:8, function(x) mean(a + 1)))
+stopCluster(cl)
+
+# Fork does can't save you  now :-)
+gc()
+a <- matrix(1, ncol=10^4*2.1, nrow=10^4)
+cl <- makeCluster(8, type = "FORK")
+parSapply(cl, 1:8, function(x) {
+  b <- a + 1
+  mean(b)
+  })
+stopCluster(cl)

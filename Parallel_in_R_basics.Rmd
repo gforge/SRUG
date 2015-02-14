@@ -1,7 +1,7 @@
 ---
 title: "Parallel in R - basics"
 author: "Max Gordon"
-date: "Tuesday, February 10, 2015"
+date: "February 14, 2015"
 output:
   ioslides_presentation:
     logo: ki_logo_square.png
@@ -85,7 +85,8 @@ stopCluster(cl)
 </div>
 
 
-## Package: `parallel` with parSapply
+## Package: `parallel` with parSapply {.smaller}
+
 
 ```{r Initiate_pr_cluster, echo=FALSE}
 no_cores <- detectCores()
@@ -179,15 +180,15 @@ foreach(exponent = 2:4,
 
 ## Fork or sock?
 
-**Fork**
+**FORK**
 
-Fork: "to divide in branches, go separate ways"<br />
+Name: "to divide in branches, go separate ways"<br />
 System: Unix/Mac<br />
 Environment: Link all
 
 **PSOCK**
 
-PSOCK: Parallel Socket Cluster<br />
+Name: Parallel Socket Cluster<br />
 System: Windows<br />
 Environment: Empty
 
@@ -195,13 +196,15 @@ Environment: Empty
 
 **From Ubuntu 14:10**
 
-```
+```{r, eval=FALSE}
 cl<-makeCluster(no_cores)
 clusterExport(cl, "a")
 clusterEvalQ(cl, library(pryr))
 
+### <b>
 parSapply(cl, X = 1:10, function(x) {address(a)}) == address(a)
 # [1] FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE
+### </b>
 stopCluster(cl)
 ```
 
@@ -209,18 +212,22 @@ stopCluster(cl)
 
 **From Ubuntu 14:10**
 
-```
+```{r, eval=FALSE}
 cl<-makePSOCKcluster(no_cores)
 clusterEvalQ(cl, library(pryr))
 clusterExport(cl, "a")
 
+### <b>
 parSapply(cl, X = 1:10, function(x) address(a)) == address(a)
 # [1] FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE
+### </b>
 stopCluster(cl)
 
 cl<-makeForkCluster(no_cores)
+### <b>
 parSapply(cl, X = 1:10, function(x) address(a)) == address(a)
 # [1] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
+### </b>
 stopCluster(cl)
 ```
 
@@ -230,17 +237,19 @@ stopCluster(cl)
 
 No memory corruption even with shared
 
-```
+```{r, eval=FALSE}
 b <- 0
 cl<-makeForkcluster(2)
 clusterExport(cl, "b")
 
+### <b>
 parSapply(cl, X = 1:10, function(x) {b <- b + 1; b})
 # [1] 1 1 1 1 1 1 1 1 1 1
 parSapply(cl, X = 1:10, function(x) {b <<- b + 1; b})
 # [1] 1 2 3 4 5 1 2 3 4 5
 b
 # [1] 0
+### </b>
 ```
 
 # Trouble shooting
@@ -252,6 +261,7 @@ b
 * Avoid `stop()`
 * Setting `makeCluster(..., outfile = "par_out.txt")`
 * Each element has a unique error file
+* Save one core: `detectCores() - 1`
 
 ## Caching
 
@@ -278,6 +288,7 @@ cacheParallel <- function(){
   
   parSapply(cl, vars, function(var){
     fn <- function(a) a^2
+    ### <b>
     dg <- digest(list(fn, var))
     cache_fn <- 
       sprintf("Cache_%s.Rdata", 
@@ -289,6 +300,7 @@ cacheParallel <- function(){
       Sys.sleep(5)
       save(var, file = cache_fn)
     }
+    ### </b>
     return(var)
   })
 }
@@ -314,7 +326,7 @@ file.remove(list.files(pattern = "Cache.+\\.Rdata"))
 
 **parLapply under the hood**
 
-```
+```{r, eval=FALSE}
 function (cl = NULL, X, fun, ...) 
 {
     cl <- defaultCluster(cl)
@@ -323,8 +335,11 @@ function (cl = NULL, X, fun, ...)
 }  
 ```
 
+**Note:** <code>splitList(X, length(cl))</code>
+
 ## Load balancing - memory
 
+* Remember to use **forks**
 * memory.limit()/memory.size() = max cores
 * remove any old copies through **rm()**
 * force return memory through **gc()**
@@ -334,3 +349,93 @@ function (cl = NULL, X, fun, ...)
 ```{r Stop_cluster, echo=FALSE}
 stopCluster(cl)
 ```
+
+## Load balancing - advanced {.smaller}
+
+**Basic setup**
+<div class="columns-2">
+```{r, eval=FALSE}
+> rm(list=ls())
+> library(pryr)
+> library(magrittr)
+> a <- matrix(1, ncol=10^4*2, nrow=10^4)
+> object_size(a)
+1.6 GB
+> system.time(mean(a))
+   user  system elapsed 
+  0.338   0.000   0.337 
+> system.time(mean(a + 1))
+   user  system elapsed 
+  0.490   0.084   0.574 
+> library(parallel)
+> cl <- makeCluster(4, type = "PSOCK")
+> system.time(clusterExport(cl, "a"))
+### <b>
+   user  system elapsed 
+  5.253   0.544   7.289 
+### </b>
+> system.time(parSapply(cl, 1:8, 
+                        function(x) mean(a + 1)))
+### <b>
+   user  system elapsed 
+  0.008   0.008   3.365 
+### </b>
+> stopCluster(cl); gc();
+> cl <- makeCluster(4, type = "FORK")
+> system.time(parSapply(cl, 1:8, 
+                        function(x) mean(a + 1)))
+### <b>
+   user  system elapsed 
+  0.009   0.008   3.123 
+### </b>
+> stopCluster(cl)
+```
+
+</div>
+
+<div style="font-size: .5em;">Note the gc() that is needed in order to avoid:
+<pre style="font-size: inherit;">
+Error in mcfork() : 
+  unable to fork, possible reason: Cannot allocate memory
+  </pre>
+</div>
+  
+## Load balancing - advanced
+
+**The PSOCK problem**
+```{r, eval=FALSE}
+> cl <- makeCluster(8, type = "PSOCK")
+> system.time(clusterExport(cl, "a"))
+   user  system elapsed 
+ 10.576   1.263  15.877 
+> system.time(parSapply(cl, 1:8, function(x) mean(a + 1)))
+### <b>
+Error in checkForRemoteErrors(val) : 
+  8 nodes produced errors; first error: cannot allocate vector of size 1.5 Gb
+### </b>
+Timing stopped at: 0.004 0 0.389 
+> stopCluster(cl)
+> cl <- makeCluster(8, type = "FORK")
+> system.time(parSapply(cl, 1:8, function(x) mean(a + 1)))
+   user  system elapsed 
+  0.014   0.016   3.735 
+> stopCluster(cl)
+```
+
+## Load balancing - advanced
+
+**Even FORKs won't save you in the end**
+```{r, eval=FALSE}
+> a <- matrix(1, ncol=10^4*2.1, nrow=10^4)
+> cl <- makeCluster(8, type = "FORK")
+> parSapply(cl, 1:8, function(x) {
++   b <- a + 1
++   mean(b)
++   })
+### <b>
+Error in unserialize(node$con) : error reading from connection
+### </b>
+```
+
+# The end
+

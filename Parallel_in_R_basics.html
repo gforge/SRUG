@@ -10,6 +10,7 @@
 
 
 
+  <meta name="date" content="2015-02-14" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -105,7 +106,7 @@
       <h1 data-config-title><!-- populated from slide_config.json --></h1>
       <h2 data-config-subtitle><!-- populated from slide_config.json --></h2>
       <p data-config-presenter><!-- populated from slide_config.json --></p>
-            <p style="margin-top: 6px; margin-left: -2px;">Tuesday, February 10, 2015</p>
+            <p style="margin-top: 6px; margin-left: -2px;">February 14, 2015</p>
           </hgroup>
   </slide>
 
@@ -210,7 +211,7 @@ parLapply(cl,
 <pre class = 'prettyprint lang-r'># Finish
 stopCluster(cl)</pre></div>
 
-</article></slide><slide class=''><hgroup><h2>Package: <code>parallel</code> with parSapply</h2></hgroup><article  id="package-parallel-with-parsapply">
+</article></slide><slide class=''><hgroup><h2>Package: <code>parallel</code> with parSapply</h2></hgroup><article  id="package-parallel-with-parsapply" class="smaller">
 
 <pre class = 'prettyprint lang-r'># Simple output
 parSapply(cl, 2:4, 
@@ -311,42 +312,42 @@ foreach(exponent = 2:4,
 
 </article></slide><slide class=''><hgroup><h2>Fork or sock?</h2></hgroup><article  id="fork-or-sock">
 
-<p><strong>Fork</strong></p>
+<p><strong>FORK</strong></p>
 
-<p>Fork: &quot;to divide in branches, go separate ways&quot;<br /> System: Unix/Mac<br /> Environment: Link all</p>
+<p>Name: &quot;to divide in branches, go separate ways&quot;<br /> System: Unix/Mac<br /> Environment: Link all</p>
 
 <p><strong>PSOCK</strong></p>
 
-<p>PSOCK: Parallel Socket Cluster<br /> System: Windows<br /> Environment: Empty</p>
+<p>Name: Parallel Socket Cluster<br /> System: Windows<br /> Environment: Empty</p>
 
 </article></slide><slide class=''><hgroup><h2>Fork or sock? cont.</h2></hgroup><article  id="fork-or-sock-cont.">
 
 <p><strong>From Ubuntu 14:10</strong></p>
 
-<pre >cl&lt;-makeCluster(no_cores)
+<pre class = 'prettyprint lang-r'>cl&lt;-makeCluster(no_cores)
 clusterExport(cl, &quot;a&quot;)
 clusterEvalQ(cl, library(pryr))
 
-parSapply(cl, X = 1:10, function(x) {address(a)}) == address(a)
+<b>parSapply(cl, X = 1:10, function(x) {address(a)}) == address(a)
 # [1] FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE
-stopCluster(cl)</pre>
+</b>stopCluster(cl)</pre>
 
 </article></slide><slide class=''><hgroup><h2>Fork or sock? cont.</h2></hgroup><article  id="fork-or-sock-cont.-1">
 
 <p><strong>From Ubuntu 14:10</strong></p>
 
-<pre >cl&lt;-makePSOCKcluster(no_cores)
+<pre class = 'prettyprint lang-r'>cl&lt;-makePSOCKcluster(no_cores)
 clusterEvalQ(cl, library(pryr))
 clusterExport(cl, &quot;a&quot;)
 
-parSapply(cl, X = 1:10, function(x) address(a)) == address(a)
+<b>parSapply(cl, X = 1:10, function(x) address(a)) == address(a)
 # [1] FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE FALSE
-stopCluster(cl)
+</b>stopCluster(cl)
 
 cl&lt;-makeForkCluster(no_cores)
-parSapply(cl, X = 1:10, function(x) address(a)) == address(a)
+<b>parSapply(cl, X = 1:10, function(x) address(a)) == address(a)
 # [1] TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE TRUE
-stopCluster(cl)</pre>
+</b>stopCluster(cl)</pre>
 
 </article></slide><slide class=''><hgroup><h2>Fork or sock? cont.</h2></hgroup><article  id="fork-or-sock-cont.-2">
 
@@ -354,16 +355,17 @@ stopCluster(cl)</pre>
 
 <p>No memory corruption even with shared</p>
 
-<pre >b &lt;- 0
+<pre class = 'prettyprint lang-r'>b &lt;- 0
 cl&lt;-makeForkcluster(2)
 clusterExport(cl, &quot;b&quot;)
 
-parSapply(cl, X = 1:10, function(x) {b &lt;- b + 1; b})
+<b>parSapply(cl, X = 1:10, function(x) {b &lt;- b + 1; b})
 # [1] 1 1 1 1 1 1 1 1 1 1
 parSapply(cl, X = 1:10, function(x) {b &lt;&lt;- b + 1; b})
 # [1] 1 2 3 4 5 1 2 3 4 5
 b
-# [1] 0</pre>
+# [1] 0
+</b></pre>
 
 </article></slide><slide class='segue dark nobackground'><hgroup class = 'auto-fadein'><h2>Trouble shooting</h2></hgroup><article  id="trouble-shooting">
 
@@ -375,6 +377,7 @@ b
 <li>Avoid <code>stop()</code></li>
 <li>Setting <code>makeCluster(..., outfile = &quot;par_out.txt&quot;)</code></li>
 <li>Each element has a unique error file</li>
+<li>Save one core: <code>detectCores() - 1</code></li>
 </ul>
 
 </article></slide><slide class=''><hgroup><h2>Caching</h2></hgroup><article  id="caching">
@@ -399,7 +402,7 @@ b
   
   parSapply(cl, vars, function(var){
     fn &lt;- function(a) a^2
-    dg &lt;- digest(list(fn, var))
+<b>    dg &lt;- digest(list(fn, var))
     cache_fn &lt;- 
       sprintf(&quot;Cache_%s.Rdata&quot;, 
               dg)
@@ -410,7 +413,7 @@ b
       Sys.sleep(5)
       save(var, file = cache_fn)
     }
-    return(var)
+</b>    return(var)
   })
 }</pre></div>
 
@@ -420,7 +423,7 @@ b
 <pre class = 'prettyprint lang-r'>system.time(out &lt;- cacheParallel())</pre>
 
 <pre >##    user  system elapsed 
-##    0.00    0.00    5.11</pre>
+##   0.003   0.000   5.075</pre>
 
 <pre class = 'prettyprint lang-r'>out</pre>
 
@@ -429,7 +432,7 @@ b
 <pre class = 'prettyprint lang-r'>system.time(out &lt;- cacheParallel())</pre>
 
 <pre >##    user  system elapsed 
-##       0       0       0</pre>
+##   0.003   0.000   0.043</pre>
 
 <pre class = 'prettyprint lang-r'>out</pre>
 
@@ -439,22 +442,101 @@ b
 
 <p><strong>parLapply under the hood</strong></p>
 
-<pre >function (cl = NULL, X, fun, ...) 
+<pre class = 'prettyprint lang-r'>function (cl = NULL, X, fun, ...) 
 {
     cl &lt;- defaultCluster(cl)
     do.call(c, clusterApply(cl, x = splitList(X, length(cl)), 
         fun = lapply, fun, ...), quote = TRUE)
 }  </pre>
 
+<p><strong>Note:</strong> <code>splitList(X, length(cl))</code></p>
+
 </article></slide><slide class=''><hgroup><h2>Load balancing - memory</h2></hgroup><article  id="load-balancing---memory">
 
 <ul>
+<li>Remember to use <strong>forks</strong></li>
 <li>memory.limit()/memory.size() = max cores</li>
 <li>remove any old copies through <strong>rm()</strong></li>
 <li>force return memory through <strong>gc()</strong></li>
 <li>try to do high-memory load parallel with low memory</li>
 <li>skip parallel if limit reached</li>
-</ul></article></slide>
+</ul>
+
+</article></slide><slide class=''><hgroup><h2>Load balancing - advanced</h2></hgroup><article  id="load-balancing---advanced" class="smaller">
+
+<strong>Basic setup</strong>
+
+<div class="columns-2">
+<pre class = 'prettyprint lang-r'>&gt; rm(list=ls())
+&gt; library(pryr)
+&gt; library(magrittr)
+&gt; a &lt;- matrix(1, ncol=10^4*2, nrow=10^4)
+&gt; object_size(a)
+1.6 GB
+&gt; system.time(mean(a))
+   user  system elapsed 
+  0.338   0.000   0.337 
+&gt; system.time(mean(a + 1))
+   user  system elapsed 
+  0.490   0.084   0.574 
+&gt; library(parallel)
+&gt; cl &lt;- makeCluster(4, type = &quot;PSOCK&quot;)
+&gt; system.time(clusterExport(cl, &quot;a&quot;))
+<b>   user  system elapsed 
+  5.253   0.544   7.289 
+</b>&gt; system.time(parSapply(cl, 1:8, 
+                        function(x) mean(a + 1)))
+<b>   user  system elapsed 
+  0.008   0.008   3.365 
+</b>&gt; stopCluster(cl); gc();
+&gt; cl &lt;- makeCluster(4, type = &quot;FORK&quot;)
+&gt; system.time(parSapply(cl, 1:8, 
+                        function(x) mean(a + 1)))
+<b>   user  system elapsed 
+  0.009   0.008   3.123 
+</b>&gt; stopCluster(cl)</pre></div>
+
+<div style="font-size: .5em;">
+Note the gc() that is needed in order to avoid:
+
+<pre style="font-size: inherit;">
+Error in mcfork() : 
+  unable to fork, possible reason: Cannot allocate memory
+  </pre></div>
+
+</article></slide><slide class=''><hgroup><h2>Load balancing - advanced</h2></hgroup><article  id="load-balancing---advanced-1">
+
+<p><strong>The PSOCK problem</strong></p>
+
+<pre class = 'prettyprint lang-r'>&gt; cl &lt;- makeCluster(8, type = &quot;PSOCK&quot;)
+&gt; system.time(clusterExport(cl, &quot;a&quot;))
+   user  system elapsed 
+ 10.576   1.263  15.877 
+&gt; system.time(parSapply(cl, 1:8, function(x) mean(a + 1)))
+<b>Error in checkForRemoteErrors(val) : 
+  8 nodes produced errors; first error: cannot allocate vector of size 1.5 Gb
+</b>Timing stopped at: 0.004 0 0.389 
+&gt; stopCluster(cl)
+&gt; cl &lt;- makeCluster(8, type = &quot;FORK&quot;)
+&gt; system.time(parSapply(cl, 1:8, function(x) mean(a + 1)))
+   user  system elapsed 
+  0.014   0.016   3.735 
+&gt; stopCluster(cl)</pre>
+
+</article></slide><slide class=''><hgroup><h2>Load balancing - advanced</h2></hgroup><article  id="load-balancing---advanced-2">
+
+<p><strong>Even FORKs won&#39;t save you in the end</strong></p>
+
+<pre class = 'prettyprint lang-r'>&gt; a &lt;- matrix(1, ncol=10^4*2.1, nrow=10^4)
+&gt; cl &lt;- makeCluster(8, type = &quot;FORK&quot;)
+&gt; parSapply(cl, 1:8, function(x) {
++   b &lt;- a + 1
++   mean(b)
++   })
+<b>Error in unserialize(node$con) : error reading from connection
+</b></pre>
+
+</article></slide><slide class='segue dark nobackground'><hgroup class = 'auto-fadein'><h2>The end</h2></hgroup><article  id="the-end"></article></slide>
 
 
   <slide class="backdrop"></slide>
