@@ -15,6 +15,14 @@ output:
 * Don't know C++
 * C++ isn't enough
 
+**Amdal's law:**
+$$\text{Maximum speed-up} = \lim_{p\to\infty}\frac{1}{\frac{1-\alpha}{p}-\alpha}=\frac{1}{\alpha}$$
+
+$\alpha = \text{non-parallelizable parts}$
+
+$p = \text{no. processors}$
+
+
 ## Parallel in R
 
 **Basics & tools**
@@ -252,16 +260,25 @@ b
 ### </b>
 ```
 
+## A few tips
+
+**Save one core for the system**
+
+```{r, eval=FALSE}
+max(1, detectCores() - 1)
+```
+
+**Macroparallel (unless memory issues)**
+
+**Microparallel `gputools`**
+
 # Trouble shooting
 
 ## Debugging
 
-**Tips**
-
 * Avoid `stop()`
 * Setting `makeCluster(..., outfile = "par_out.txt")`
 * Each element has a unique error file
-* Save one core: `detectCores() - 1`
 
 ## Caching
 

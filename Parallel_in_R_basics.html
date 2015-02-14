@@ -119,6 +119,12 @@
 <li>C++ isn&#39;t enough</li>
 </ul>
 
+<p><strong>Amdal&#39;s law:</strong> \[\text{Maximum speed-up} = \lim_{p\to\infty}\frac{1}{\frac{1-\alpha}{p}-\alpha}=\frac{1}{\alpha}\]</p>
+
+<p>\(\alpha = \text{non-parallelizable parts}\)</p>
+
+<p>\(p = \text{no. processors}\)</p>
+
 </article></slide><slide class=''><hgroup><h2>Parallel in R</h2></hgroup><article  id="parallel-in-r">
 
 <p><strong>Basics &amp; tools</strong></p>
@@ -367,17 +373,24 @@ b
 # [1] 0
 </b></pre>
 
+</article></slide><slide class=''><hgroup><h2>A few tips</h2></hgroup><article  id="a-few-tips">
+
+<p><strong>Save one core for the system</strong></p>
+
+<pre class = 'prettyprint lang-r'>max(1, detectCores() - 1)</pre>
+
+<p><strong>Macroparallel (unless memory issues)</strong></p>
+
+<p><strong>Microparallel <code>gputools</code></strong></p>
+
 </article></slide><slide class='segue dark nobackground'><hgroup class = 'auto-fadein'><h2>Trouble shooting</h2></hgroup><article  id="trouble-shooting">
 
 </article></slide><slide class=''><hgroup><h2>Debugging</h2></hgroup><article  id="debugging">
-
-<p><strong>Tips</strong></p>
 
 <ul>
 <li>Avoid <code>stop()</code></li>
 <li>Setting <code>makeCluster(..., outfile = &quot;par_out.txt&quot;)</code></li>
 <li>Each element has a unique error file</li>
-<li>Save one core: <code>detectCores() - 1</code></li>
 </ul>
 
 </article></slide><slide class=''><hgroup><h2>Caching</h2></hgroup><article  id="caching">
@@ -423,7 +436,7 @@ b
 <pre class = 'prettyprint lang-r'>system.time(out &lt;- cacheParallel())</pre>
 
 <pre >##    user  system elapsed 
-##   0.003   0.000   5.075</pre>
+##   0.003   0.001   5.079</pre>
 
 <pre class = 'prettyprint lang-r'>out</pre>
 
@@ -432,7 +445,7 @@ b
 <pre class = 'prettyprint lang-r'>system.time(out &lt;- cacheParallel())</pre>
 
 <pre >##    user  system elapsed 
-##   0.003   0.000   0.043</pre>
+##   0.001   0.004   0.046</pre>
 
 <pre class = 'prettyprint lang-r'>out</pre>
 
