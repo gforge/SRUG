@@ -244,10 +244,15 @@ parSapply(cl, as.character(2:4),
 library(doParallel)
 
 cl&lt;-makeCluster(no_cores)
-
-# Do the foreach
 registerDoParallel(cl)
+
 foreach(exponent = 2:4, 
+        .combine = c)  %dopar%  
+  base^exponent</pre>
+
+<pre >## [1]  4  8 16</pre>
+
+<pre class = 'prettyprint lang-r'>foreach(exponent = 2:4, 
         .combine = c)  %dopar%  
   base^exponent</pre>
 
@@ -318,13 +323,9 @@ foreach(exponent = 2:4,
 
 </article></slide><slide class=''><hgroup><h2>Fork or sock?</h2></hgroup><article  id="fork-or-sock">
 
-<p><strong>FORK</strong></p>
+<p><strong>FORK</strong>: &quot;to divide in branches and go separate ways&quot;<br /> System: Unix/Mac<br /> Environment: Link all</p>
 
-<p>Name: &quot;to divide in branches, go separate ways&quot;<br /> System: Unix/Mac<br /> Environment: Link all</p>
-
-<p><strong>PSOCK</strong></p>
-
-<p>Name: Parallel Socket Cluster<br /> System: Windows<br /> Environment: Empty</p>
+<p><strong>PSOCK</strong>: Parallel Socket Cluster<br /> System: Windows<br /> Environment: Empty</p>
 
 </article></slide><slide class=''><hgroup><h2>Fork or sock? cont.</h2></hgroup><article  id="fork-or-sock-cont.">
 
@@ -379,19 +380,48 @@ b
 
 <pre class = 'prettyprint lang-r'>max(1, detectCores() - 1)</pre>
 
+<p><strong>Remember to seed correctly with: clusterSetRNGStream</strong></p>
+
 <p><strong>Macroparallel (unless memory issues)</strong></p>
 
 <p><strong>Microparallel <code>gputools</code></strong></p>
 
 </article></slide><slide class='segue dark nobackground'><hgroup class = 'auto-fadein'><h2>Trouble shooting</h2></hgroup><article  id="trouble-shooting">
 
-</article></slide><slide class=''><hgroup><h2>Debugging</h2></hgroup><article  id="debugging">
+</article></slide><slide class=''><hgroup><h2>Debugging without stop?</h2></hgroup><article  id="debugging-without-stop" class="smaller">
 
-<ul>
-<li>Avoid <code>stop()</code></li>
-<li>Setting <code>makeCluster(..., outfile = &quot;par_out.txt&quot;)</code></li>
-<li>Each element has a unique error file</li>
-</ul>
+<p><code>stop()</code> and you loose</p>
+
+<p>The <code>tryCatch</code> - list approach:</p>
+
+<pre class = 'prettyprint lang-r'>foreach(x=list(1, 2, &quot;a&quot;))  %dopar%  
+{
+  tryCatch({
+    c(1/x, x, 2^x)
+  }, error = function(e) return(paste0(&quot;The variable &#39;&quot;, x, &quot;&#39;&quot;, 
+                                      &quot; caused the error: &#39;&quot;, e, &quot;&#39;&quot;)))
+}</pre>
+
+<pre >## [[1]]
+## [1] 1 1 2
+## 
+## [[2]]
+## [1] 0.5 2.0 4.0
+## 
+## [[3]]
+## [1] &quot;The variable &#39;a&#39; caused the error: &#39;Error in 1/x: non-numeric argument to binary operator\n&#39;&quot;</pre>
+
+</article></slide><slide class=''><hgroup><h2>Debugging with files</h2></hgroup><article  id="debugging-with-files">
+
+<ol>
+<li>Set outfile: <code>makeCluster(..., outfile = &quot;par_out.txt&quot;)</code></li>
+<li>Use unique files:</li>
+</ol>
+
+<pre class = 'prettyprint lang-r'>foreach(x=list(1, 2, &quot;a&quot;))  %dopar%  
+{
+  cat(dput(x), file = paste0(&quot;debug_file_&quot;, x, &quot;.txt&quot;))
+} </pre>
 
 </article></slide><slide class=''><hgroup><h2>Caching</h2></hgroup><article  id="caching">
 
@@ -405,9 +435,8 @@ b
 
 <p>or use <code>R.cache</code>-package</p>
 
-</article></slide><slide class=''><hgroup><h2>Caching with digest</h2></hgroup><article  id="caching-with-digest">
+</article></slide><slide class=''><hgroup><h2>Caching with digest</h2></hgroup><article  id="caching-with-digest" class="smaller">
 
-<div class="columns-2">
 <pre class = 'prettyprint lang-r'>cacheParallel &lt;- function(){
   vars &lt;- 1:2
   tmp &lt;- clusterEvalQ(cl, 
@@ -428,7 +457,7 @@ b
     }
 </b>    return(var)
   })
-}</pre></div>
+}</pre>
 
 </article></slide><slide class=''><hgroup><h2>Caching with digest cont.</h2></hgroup><article  id="caching-with-digest-cont.">
 
@@ -436,7 +465,7 @@ b
 <pre class = 'prettyprint lang-r'>system.time(out &lt;- cacheParallel())</pre>
 
 <pre >##    user  system elapsed 
-##   0.003   0.001   5.079</pre>
+##    0.01    0.00    5.08</pre>
 
 <pre class = 'prettyprint lang-r'>out</pre>
 
@@ -445,7 +474,7 @@ b
 <pre class = 'prettyprint lang-r'>system.time(out &lt;- cacheParallel())</pre>
 
 <pre >##    user  system elapsed 
-##   0.001   0.004   0.046</pre>
+##       0       0       0</pre>
 
 <pre class = 'prettyprint lang-r'>out</pre>
 
@@ -471,8 +500,7 @@ b
 <li>memory.limit()/memory.size() = max cores</li>
 <li>remove any old copies through <strong>rm()</strong></li>
 <li>force return memory through <strong>gc()</strong></li>
-<li>try to do high-memory load parallel with low memory</li>
-<li>skip parallel if limit reached</li>
+<li>skip parallel if memory limit reached</li>
 </ul>
 
 </article></slide><slide class=''><hgroup><h2>Load balancing - advanced</h2></hgroup><article  id="load-balancing---advanced" class="smaller">
@@ -481,8 +509,10 @@ b
 
 <div class="columns-2">
 <pre class = 'prettyprint lang-r'>&gt; rm(list=ls())
+
 &gt; library(pryr)
 &gt; library(magrittr)
+
 &gt; a &lt;- matrix(1, ncol=10^4*2, nrow=10^4)
 &gt; object_size(a)
 1.6 GB
@@ -492,6 +522,8 @@ b
 &gt; system.time(mean(a + 1))
    user  system elapsed 
   0.490   0.084   0.574 
+
+
 &gt; library(parallel)
 &gt; cl &lt;- makeCluster(4, type = &quot;PSOCK&quot;)
 &gt; system.time(clusterExport(cl, &quot;a&quot;))
@@ -502,6 +534,7 @@ b
 <b>   user  system elapsed 
   0.008   0.008   3.365 
 </b>&gt; stopCluster(cl); gc();
+
 &gt; cl &lt;- makeCluster(4, type = &quot;FORK&quot;)
 &gt; system.time(parSapply(cl, 1:8, 
                         function(x) mean(a + 1)))
@@ -530,6 +563,7 @@ Error in mcfork() :
   8 nodes produced errors; first error: cannot allocate vector of size 1.5 Gb
 </b>Timing stopped at: 0.004 0 0.389 
 &gt; stopCluster(cl)
+
 &gt; cl &lt;- makeCluster(8, type = &quot;FORK&quot;)
 &gt; system.time(parSapply(cl, 1:8, function(x) mean(a + 1)))
    user  system elapsed 

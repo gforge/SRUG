@@ -129,9 +129,12 @@ library(foreach)
 library(doParallel)
 
 cl<-makeCluster(no_cores)
-
-# Do the foreach
 registerDoParallel(cl)
+
+foreach(exponent = 2:4, 
+        .combine = c)  %dopar%  
+  base^exponent
+
 foreach(exponent = 2:4, 
         .combine = c)  %dopar%  
   base^exponent
@@ -188,15 +191,11 @@ foreach(exponent = 2:4,
 
 ## Fork or sock?
 
-**FORK**
-
-Name: "to divide in branches, go separate ways"<br />
+**FORK**: "to divide in branches and go separate ways"<br />
 System: Unix/Mac<br />
 Environment: Link all
 
-**PSOCK**
-
-Name: Parallel Socket Cluster<br />
+**PSOCK**: Parallel Socket Cluster<br />
 System: Windows<br />
 Environment: Empty
 
@@ -268,17 +267,41 @@ b
 max(1, detectCores() - 1)
 ```
 
+**Remember to seed correctly with: clusterSetRNGStream**
+
 **Macroparallel (unless memory issues)**
 
 **Microparallel `gputools`**
 
 # Trouble shooting
 
-## Debugging
+## Debugging without stop? {.smaller}
 
-* Avoid `stop()`
-* Setting `makeCluster(..., outfile = "par_out.txt")`
-* Each element has a unique error file
+`stop()` and you loose
+
+The `tryCatch` - list approach:
+```{r}
+foreach(x=list(1, 2, "a"))  %dopar%  
+{
+  tryCatch({
+    c(1/x, x, 2^x)
+  }, error = function(e) return(paste0("The variable '", x, "'", 
+                                      " caused the error: '", e, "'")))
+}
+```
+
+
+## Debugging with files
+
+1. Set outfile: `makeCluster(..., outfile = "par_out.txt")`
+2. Use unique files:
+
+```{r, eval=FALSE}
+foreach(x=list(1, 2, "a"))  %dopar%  
+{
+  cat(dput(x), file = paste0("debug_file_", x, ".txt"))
+} 
+```
 
 ## Caching
 
@@ -290,13 +313,12 @@ max(1, detectCores() - 1)
 
 or use `R.cache`-package
 
-## Caching with digest
+## Caching with digest {.smaller}
 
 ```{r, echo=FALSE, results='hide'}
 file.remove(list.files(pattern = "Cache.+\\.Rdata"))
 ```
 
-<div class="columns-2">
 ```{r}
 cacheParallel <- function(){
   vars <- 1:2
@@ -322,7 +344,6 @@ cacheParallel <- function(){
   })
 }
 ```
-</div>
 
 ## Caching with digest cont.
 
@@ -360,8 +381,7 @@ function (cl = NULL, X, fun, ...)
 * memory.limit()/memory.size() = max cores
 * remove any old copies through **rm()**
 * force return memory through **gc()**
-* try to do high-memory load parallel with low memory
-* skip parallel if limit reached
+* skip parallel if memory limit reached
 
 ```{r Stop_cluster, echo=FALSE}
 stopCluster(cl)
@@ -373,8 +393,10 @@ stopCluster(cl)
 <div class="columns-2">
 ```{r, eval=FALSE}
 > rm(list=ls())
+
 > library(pryr)
 > library(magrittr)
+
 > a <- matrix(1, ncol=10^4*2, nrow=10^4)
 > object_size(a)
 1.6 GB
@@ -384,6 +406,8 @@ stopCluster(cl)
 > system.time(mean(a + 1))
    user  system elapsed 
   0.490   0.084   0.574 
+
+
 > library(parallel)
 > cl <- makeCluster(4, type = "PSOCK")
 > system.time(clusterExport(cl, "a"))
@@ -398,6 +422,7 @@ stopCluster(cl)
   0.008   0.008   3.365 
 ### </b>
 > stopCluster(cl); gc();
+
 > cl <- makeCluster(4, type = "FORK")
 > system.time(parSapply(cl, 1:8, 
                         function(x) mean(a + 1)))
@@ -432,6 +457,7 @@ Error in checkForRemoteErrors(val) :
 ### </b>
 Timing stopped at: 0.004 0 0.389 
 > stopCluster(cl)
+
 > cl <- makeCluster(8, type = "FORK")
 > system.time(parSapply(cl, 1:8, function(x) mean(a + 1)))
    user  system elapsed 
