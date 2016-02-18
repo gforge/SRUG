@@ -194,13 +194,13 @@ commits(repo) %>%
 
 ```
 [[1]]
-[024ad5f] 2016-02-15: Added top charts
+[65e26d3] 2016-02-16: Switched to Rpres for better styling
 
 [[2]]
-[fc5fa42] 2016-02-14: Started working on R-trend presentation
+[ff8addf] 2016-02-16: Added a few more details to trends
 
 [[3]]
-[d51d5dd] 2015-02-15: Added the try-catch approach
+[024ad5f] 2016-02-15: Added top charts
 ```
 
 DiagrammeR
